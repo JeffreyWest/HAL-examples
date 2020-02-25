@@ -1,6 +1,6 @@
 ## HAL-examples
 
-This is my open-source code repository of examples in the "[Hybrid Automata Library](http://halloworld.org/))" framework.
+This is my open-source code repository of examples in the "[Hybrid Automata Library](http://halloworld.org/)" framework.
 
 ## Before you start
 All examples use the open-source agent-based modeling platform called [HAL](http://halloworld.org/). In order to run this code base, you'll need to download the latest version of [Java](http://www.oracle.com/technetwork/java/javase/downloads/jdk9-downloads-3848520.html) and an editor (we suggest using [IntelliJ Idea](https://www.jetbrains.com/idea/download/)).
