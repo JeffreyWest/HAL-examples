@@ -8,14 +8,16 @@ import HAL.Gui.UIWindow;
 import HAL.Rand;
 import HAL.Util;
 
+import java.util.ArrayList;
+
 //cells grow and mutate
 class Person extends AgentSQ2Dunstackable<OutbreakWorld>{
 
     public final static int SUSCEPTIBLE = 0;
+    public final static int DEAD = 1;
+    public final static int RECOVERED = 2;
     public final static int ASYMPTOMATIC_INFECTED = 3;
     public final static int SYMPTOMATIC_INFECTED = 4;
-    public final static int RECOVERED = 2;
-    public final static int DEAD = 1;
 
     // cell attributes: type; future_type; fitness
     int type;
@@ -23,30 +25,27 @@ class Person extends AgentSQ2Dunstackable<OutbreakWorld>{
     boolean quarantined;
 
     // count-down timers until next state:
-    int symptomatic_counter; // count until go from A -> S
-    int recovered_counter; // count until go from S -> R
+    int day_counter;
 
 
     public void Init(int type) {
         this.type = type;
         this.future_type = type;
-        this.symptomatic_counter = 0;
-        this.recovered_counter = 0;
         this.quarantined = false;
+        this.day_counter = 0;
+        G.counts[type]++;
     }
 
     void IncrementCounters() {
-        if (this.type == ASYMPTOMATIC_INFECTED) {
-            symptomatic_counter++;
-            if (symptomatic_counter >= G.TIME_UNTIL_SYMPTOMATIC) {
-                this.future_type = SYMPTOMATIC_INFECTED;
-            }
+        day_counter++;
+
+        if ((this.type == ASYMPTOMATIC_INFECTED) && (day_counter >= G.TIME_UNTIL_SYMPTOMATIC)) {
+            this.future_type = SYMPTOMATIC_INFECTED;
+            day_counter = 0;
         }
-        if (this.type == SYMPTOMATIC_INFECTED) {
-            recovered_counter++;
-            if (recovered_counter >= G.TIME_UNTIL_RECOVERED) {
-                this.future_type = RECOVERED;
-            }
+        if ((this.type == SYMPTOMATIC_INFECTED) && (day_counter >= G.TIME_UNTIL_RECOVERED)) {
+            this.future_type = RECOVERED;
+            day_counter = 0;
         }
     }
 
@@ -84,26 +83,27 @@ public class OutbreakWorld extends AgentGrid2D<Person> {
     public int TIME_UNTIL_RECOVERED = 8;
 
     static final int TOTAL_TIME = 100;
-    static final int DIMENSION = 300;
+    static final int DIMENSION = 300; // was 300
     static final int SCALE_FACTOR = 1;
     static final int PAUSE = 10; // set a "pause" between timesteps (milliseconds)
     static final boolean SAVE_GIF = true;
     static final int GIF_DRAW_MODIFIER = 1;
     
     // chart of sizes
-    public int CHART_TIME_SCALE; // do not change
-    public boolean ABOVE_CAPACITY = false;
 
+
+
+
+    // used for visualization ( do not change )
+    public int CHART_TIME_SCALE; // do not change
 
     public UIGrid vis;
     public Rand rn = new Rand();
-
     public int[] hood = Util.RectangleHood(false,TRAVEL_RADIUS,TRAVEL_RADIUS);
-
-    public UIWindow win = new UIWindow("Outbreak",true,null,true);
-
-
     public GifMaker gifMaker = (SAVE_GIF) ? new GifMaker("Outbreak/outbreak_world.gif",100*GIF_DRAW_MODIFIER,true) : null;//used for visualization;
+    public int[] counts;
+    public boolean ABOVE_CAPACITY = false;
+    public boolean VISUALIZE_CHART = false;
 
     /*
         OutbreakWorld CONSTRUCTOR
@@ -112,7 +112,11 @@ public class OutbreakWorld extends AgentGrid2D<Person> {
     public OutbreakWorld(boolean include_chart) {
         super(DIMENSION, DIMENSION, Person.class,false,false);
 
-        SetupVisualization(include_chart);
+        VISUALIZE_CHART = include_chart;
+        SetupVisualization();
+
+        // setup initial counts vector
+        counts = new int[] {0,0,0,0,0};
 
         // set the full domain to "SUSCEPTIBLE" type
         for (int i = 0; i < length; i++) { NewAgentSQ(i).Init(Person.SUSCEPTIBLE); }
@@ -121,36 +125,34 @@ public class OutbreakWorld extends AgentGrid2D<Person> {
         GetAgent((this.xDim-1)/2,(this.xDim-1)/2).Init(Person.ASYMPTOMATIC_INFECTED);
     }
 
-    public void SetupVisualization(boolean include_chart) {
-        CHART_TIME_SCALE = (DIMENSION*3) > TOTAL_TIME ? Math.round((DIMENSION*3)/TOTAL_TIME) : -Math.round(TOTAL_TIME/(DIMENSION*3));
+    public void SetupVisualization() {
+        if (VISUALIZE_CHART) {
+            CHART_TIME_SCALE = (DIMENSION * 3) > TOTAL_TIME ? Math.round((DIMENSION * 3) / TOTAL_TIME) : -Math.round(TOTAL_TIME / (DIMENSION * 3));
 
-        if (CHART_TIME_SCALE > 0) {
-            vis = new UIGrid(DIMENSION+Math.round(TOTAL_TIME*CHART_TIME_SCALE),DIMENSION,SCALE_FACTOR);
+            if (CHART_TIME_SCALE > 0) {
+                vis = new UIGrid(DIMENSION + Math.round(TOTAL_TIME * CHART_TIME_SCALE), DIMENSION, SCALE_FACTOR);
+            } else {
+                vis = new UIGrid(DIMENSION + Math.round(TOTAL_TIME / Math.abs(CHART_TIME_SCALE)), DIMENSION, SCALE_FACTOR);
+            }
         } else {
-            vis = new UIGrid(DIMENSION+Math.round(TOTAL_TIME/Math.abs(CHART_TIME_SCALE)),DIMENSION,SCALE_FACTOR);
+            vis = new UIGrid(DIMENSION, DIMENSION, SCALE_FACTOR);
         }
-
-        win.AddCol(0,vis);
-        win.RunGui();
     }
 
     /*
         StepCells()
             - loop through each cell at every time step
-            -
     */
 
     public void StepCells(int time){
 
-        // check how many infected:
-        double infected_percent = 0.0;
-        for (Person c : this) {
-            if ((c.type == Person.ASYMPTOMATIC_INFECTED) || (c.type == Person.SYMPTOMATIC_INFECTED)) {
-                infected_percent += 1.0;
-            }
-        }
-        infected_percent /= (double)(DIMENSION*DIMENSION);
+        Draw();
+        if (VISUALIZE_CHART) { DrawChart(time);}
 
+        if ((SAVE_GIF) && (time % GIF_DRAW_MODIFIER == 0)) { gifMaker.AddFrame(vis); }
+
+        // check how many infected:
+        double infected_percent =  (counts[Person.ASYMPTOMATIC_INFECTED] + counts[Person.SYMPTOMATIC_INFECTED]) /  (double)(DIMENSION*DIMENSION);
 
         // multiple fatality rate, if above hospital capacity
         double effective_fatality_rate = FATALITY_RATE;
@@ -193,8 +195,49 @@ public class OutbreakWorld extends AgentGrid2D<Person> {
         }
 
 
+        // reset & count all types
+        counts = new int[] {0,0,0,0,0};
+        for (Person c : this) {
+            c.type = c.future_type;
 
-        for (Person c : this) { c.type = c.future_type; }
+            // also update counts vector here:
+            counts[c.type]++;
+        }
+    }
+
+    public static void Simulate_N_by_N_states(int n) {
+        ArrayList<OutbreakWorld> list_of_localities= new ArrayList<OutbreakWorld>();
+
+        UIWindow win = new UIWindow("Outbreak",true,null,true);
+        for (int i = 0; i < n*n; i++) {
+            list_of_localities.add(new OutbreakWorld(false));
+            win.AddCol(i % n,list_of_localities.get(i).vis);
+        }
+        win.RunGui();
+
+
+
+        for (int tick = 0; tick < TOTAL_TIME; tick++) {
+            System.out.println("Time:  " + tick);
+            for (int i = 0; i < list_of_localities.size(); i++) {
+                list_of_localities.get(i).StepCells(tick);
+            }
+        }
+    }
+
+    public static void SimulateSingleState(boolean visualize_chart) {
+        UIWindow win = new UIWindow("Outbreak",true,null,true);
+        OutbreakWorld world = new OutbreakWorld(visualize_chart);
+        win.AddCol(0, world.vis);
+        win.RunGui();
+
+        for (int tick = 0; tick < TOTAL_TIME; tick++) {
+
+            System.out.println("Time:  " + tick);
+            world.StepCells(tick);
+        }
+
+        if (world.SAVE_GIF) { world.gifMaker.Close(); }
     }
 
     /*
@@ -204,34 +247,37 @@ public class OutbreakWorld extends AgentGrid2D<Person> {
 
     public static void main(String[]args){
 
-        OutbreakWorld grid=new OutbreakWorld(true);
+//        Simulate_N_by_N_states(3);
 
-        for (int tick = 0; tick < TOTAL_TIME; tick++) {
-
-            grid.Draw(tick);
-
-
-            if ((SAVE_GIF) && (tick % GIF_DRAW_MODIFIER == 0)) {
-                grid.gifMaker.AddFrame(grid.vis);
-            }
-
-            System.out.println("Time:  " + tick);
-            grid.StepCells(tick+1);
-        }
-
-        if (grid.SAVE_GIF) { grid.gifMaker.Close(); }
+        SimulateSingleState(true);
     }
 
-    public void Draw(int time) {
-        int[] counts = new int[] {0,0,0,0,0};
+    public void Draw() {
 
+        // draw each person's state, override if they're quarantined
         for (int i = 0; i < xDim*yDim; i++) {
             Person c = this.GetAgent(i);
             if (c!=null) {
-                counts[c.type]++;
                 this.vis.SetPix(i,(c.quarantined) ? Util.BLUE :  ReturnColor(c.type));
             }
         }
+
+        // Green boundary indicates if above hospital capacity
+        if (ABOVE_CAPACITY) {
+            // assumes square:
+            for (int i = 0; i < xDim; i++) {
+                vis.SetPix(0,i,Util.GREEN);
+                vis.SetPix(xDim-1,i,Util.GREEN);
+                vis.SetPix(i,0,Util.GREEN);
+                vis.SetPix(i,xDim-1,Util.GREEN);
+            }
+        }
+
+        this.vis.TickPause(PAUSE);
+    }
+
+    void DrawChart(int time){
+
 
         int pixels[] = new int[counts.length];
         for (int type = 0; type < counts.length; type++) {
@@ -269,20 +315,6 @@ public class OutbreakWorld extends AgentGrid2D<Person> {
                 bottom_ticker += percent;
             }
         }
-
-        // indicate if above hospital capacity
-        if (ABOVE_CAPACITY) {
-            // assumes square:
-            for (int i = 0; i < xDim; i++) {
-                vis.SetPix(0,i,Util.GREEN);
-                vis.SetPix(xDim-1,i,Util.GREEN);
-                vis.SetPix(i,0,Util.GREEN);
-                vis.SetPix(i,xDim-1,Util.GREEN);
-            }
-        }
-
-
-        this.vis.TickPause(PAUSE);
     }
 
 
