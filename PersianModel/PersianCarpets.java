@@ -62,7 +62,7 @@ class CellEx extends AgentSQ2Dunstackable<PersianCarpets>{
 
 public class PersianCarpets extends AgentGrid2D<CellEx> {
 
-    double b = 1.35; // try b = 1.35, or b = 1.61
+    double b = 1.61; // try b = 1.35, or b = 1.61
 
     static final int DIMENSION = 101;
     static final int SCALE_FACTOR = 5;

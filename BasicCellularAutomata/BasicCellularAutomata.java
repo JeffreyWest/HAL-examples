@@ -7,8 +7,8 @@ import HAL.Util;
 
 public class BasicCellularAutomata extends AgentGrid2D<BasicCell> {
 
-    public static final int RULE = 121; // must be between 0 and 255
-    public static final int DOMAIN_SIZE = 200;
+    public static final int RULE = 30; // must be between 0 and 255
+    public static final int DOMAIN_SIZE = 100;
     public GridWindow vis;
 
     public static void main(String[]args){
@@ -16,7 +16,7 @@ public class BasicCellularAutomata extends AgentGrid2D<BasicCell> {
         BasicCellularAutomata grid=new BasicCellularAutomata();
         grid.Draw();
 
-        GifMaker gif = new GifMaker("./BasicCellularAutomata/rule"+Integer.toString(RULE)+".gif",10,true);
+        GifMaker gif = new GifMaker("./BasicCellularAutomata/small_rule"+Integer.toString(RULE)+".gif",100,true);
         gif.AddFrame(grid.vis);
 
         for (int tick = 2; tick <= grid.yDim; tick++) {

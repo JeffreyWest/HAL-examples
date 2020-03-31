@@ -72,7 +72,7 @@ public class OutbreakWorld extends AgentGrid2D<Person> {
     public int ENCOUNTERS_PER_DAY = 4;
     public int TRAVEL_RADIUS = 15;
 
-    public double QUARANTINE_RATE_SYMPTOMATIC = 0.9;
+    public double QUARANTINE_RATE_SYMPTOMATIC = 0.0;
     public double QUARANTINE_RATE_ASYMPTOMATIC = 0.0;
     public double FATALITY_RATE = 0.01;
 
@@ -82,9 +82,9 @@ public class OutbreakWorld extends AgentGrid2D<Person> {
     public int TIME_UNTIL_SYMPTOMATIC = 7;
     public int TIME_UNTIL_RECOVERED = 8;
 
-    static final int TOTAL_TIME = 100;
-    static final int DIMENSION = 300; // was 300
-    static final int SCALE_FACTOR = 1;
+    static final int TOTAL_TIME = 50;
+    static final int DIMENSION = 100; // was 300
+    static final int SCALE_FACTOR = 2;
     static final int PAUSE = 10; // set a "pause" between timesteps (milliseconds)
     static final boolean SAVE_GIF = true;
     static final int GIF_DRAW_MODIFIER = 1;
@@ -248,7 +248,6 @@ public class OutbreakWorld extends AgentGrid2D<Person> {
     public static void main(String[]args){
 
 //        Simulate_N_by_N_states(3);
-
         SimulateSingleState(true);
     }
 
