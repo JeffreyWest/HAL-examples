@@ -54,7 +54,7 @@ class Person extends AgentSQ2Dunstackable<OutbreakWorld>{
 
         for (int i = 0; i < G.ENCOUNTERS_PER_DAY; i++) {
             Person thisNeighbor = G.GetAgent(G.hood[G.rn.Int(nNeighbors)]); // random neighbor in hood
-            if (thisNeighbor.type == SUSCEPTIBLE) {
+            if ((thisNeighbor.type == SUSCEPTIBLE) && (!thisNeighbor.quarantined)) { // safe if in quarantine
                 if ((G.rn.Double() < infection_rate)) {
                     thisNeighbor.future_type = Person.ASYMPTOMATIC_INFECTED;
                 }
@@ -66,15 +66,15 @@ class Person extends AgentSQ2Dunstackable<OutbreakWorld>{
 public class OutbreakWorld extends AgentGrid2D<Person> {
 
     // infection parameters
-    public double TRANSMISSION = Math.pow(0.45,3);
-    public int ENCOUNTERS_PER_DAY = 4;
-    public int TRAVEL_RADIUS = 15;
+    public double TRANSMISSION = 0.05;
+    public int ENCOUNTERS_PER_DAY = 8;
+    public int TRAVEL_RADIUS = 25;
 
     public double QUARANTINE_RATE_SYMPTOMATIC = 0.0;
     public double QUARANTINE_RATE_ASYMPTOMATIC = 0.0;
     public double FATALITY_RATE = 0.01;
 
-    public double HOSPITAL_CAPACITY = 0.05;
+    public double HOSPITAL_CAPACITY = 0.005;
     public double FATALITY_MULTIPLIER_DUE_TO_EXCEEDING_CAPACITY = 2.0;
 
     public int TIME_UNTIL_SYMPTOMATIC = 7;
@@ -113,6 +113,12 @@ public class OutbreakWorld extends AgentGrid2D<Person> {
 
         // set the center to be single person asymptomatic
         GetAgent((this.xDim-1)/2,(this.xDim-1)/2).Init(Person.ASYMPTOMATIC_INFECTED);
+
+        GetAgent((this.xDim-1)/2+1,(this.xDim-1)/2).Init(Person.ASYMPTOMATIC_INFECTED);
+        GetAgent((this.xDim-1)/2-1,(this.xDim-1)/2).Init(Person.ASYMPTOMATIC_INFECTED);
+        GetAgent((this.xDim-1)/2,(this.xDim-1)/2+1).Init(Person.ASYMPTOMATIC_INFECTED);
+        GetAgent((this.xDim-1)/2,(this.xDim-1)/2-1).Init(Person.ASYMPTOMATIC_INFECTED);
+
     }
 
     /*
@@ -141,7 +147,9 @@ public class OutbreakWorld extends AgentGrid2D<Person> {
             }
 
             if ((c.type == Person.ASYMPTOMATIC_INFECTED)) {
-                c.InfectOthers();
+                if (!c.quarantined) {
+                    c.InfectOthers();
+                }
                 if (rn.Double() < QUARANTINE_RATE_ASYMPTOMATIC) {
                     c.quarantined = true;
                 }
@@ -151,7 +159,9 @@ public class OutbreakWorld extends AgentGrid2D<Person> {
             }
 
             if (c.type == Person.SYMPTOMATIC_INFECTED) {
-                c.InfectOthers();
+                if (!c.quarantined) {
+                    c.InfectOthers();
+                }
                 if (rn.Double() < QUARANTINE_RATE_SYMPTOMATIC) {
                     c.quarantined = true;
                 }
