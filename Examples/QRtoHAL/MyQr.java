@@ -86,7 +86,7 @@ public class MyQr extends AgentGrid2D<QRAgent> {
         String data = "http://halloworld.org";
 
         // start window
-        int scale_factor = 25;
+        int scale_factor = 15;
         MyQr QR = new MyQr(data,scale_factor);
 
         ArrayList<UIGrid> grids = new ArrayList<>();
@@ -98,7 +98,7 @@ public class MyQr extends AgentGrid2D<QRAgent> {
         }
 
         // add them to gif in reverse order, so QR is at the end
-        GifMaker gm = new GifMaker("QRtoHAL/QR.gif",100,false);
+        GifMaker gm = new GifMaker("Examples/QRtoHAL/QR.gif",100,false);
         for (int i = 0; i < grids.size(); i++) {
             gm.AddFrame(grids.get(grids.size()-i-1));
         }
