@@ -107,5 +107,7 @@ public class MyQr extends AgentGrid2D<QRAgent> {
         for (int i = 0; i < 40; i++) {
             gm.AddFrame(grids.get(0));
         }
+
+        gm.Close();
     }
 }
