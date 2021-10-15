@@ -1,4 +1,4 @@
-package QRtoHAL;
+package Examples.QRtoHAL;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,6 +17,10 @@ import com.google.zxing.NotFoundException;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+
+
+// for this example to work correctly, you must go to Project Structure->Modules-> Dependencies
+// ... and add the 2 jar files in Examples/QRtoHAL/ZXing (used for QR creation)
 
 //QR pixel (or a "QR agent")
 class QRAgent extends AgentSQ2Dunstackable<MyQr> {
