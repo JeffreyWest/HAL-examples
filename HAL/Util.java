@@ -1,11 +1,15 @@
 package HAL;
 
+import HAL.GridsAndAgents.Grid2Dint;
+import HAL.Gui.UIGrid;
 import HAL.Interfaces.*;
 import HAL.Interfaces.SerializableModel;
 import HAL.Tools.FileIO;
 import HAL.Tools.Internal.SweepRun;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
@@ -14,6 +18,7 @@ import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -27,6 +32,7 @@ public final class Util {
 
     public static final double DOUBLE_EPSILON = 2.22E-16;
     private static Scanner inputReader=null;
+    private static DecimalFormat fmt=new DecimalFormat("0.#E0#");
 
     /**
      * returns a color integer based on the RGB components passed in. color values should be scaled from 0 to 1
@@ -193,6 +199,13 @@ public final class Util {
         return color & 0x00ffffff | (a << 24);
     }
 
+    /**
+     * returns the inverse of the input color
+     */
+    public static int InvertColor(int color){
+        return RGB256(255-GetRed256(color),255-GetGreen256(color),255-GetBlue256(color));
+    }
+
     //a set of default colors
     final public static int RED = RGB(1, 0, 0), GREEN = RGB(0, 1, 0), BLUE = RGB(0, 0, 1), BLACK = RGB(0, 0, 0), WHITE = RGB(1, 1, 1), YELLOW = RGB(1, 1, 0), CYAN = RGB(0, 1, 1), MAGENTA = RGB(1, 0, 1);
 
@@ -330,10 +343,7 @@ public final class Util {
      */
     public static int HeatMapRGB(double val, double min, double max) {
         val = Scale0to1(val, min, max);
-        double c1 = val * 4;
-        double c2 = (val - 0.25) * 2;
-        double c3 = (val - 0.75) * 4;
-        return RGB(c1, c2, c3);
+        return HeatMapRGB(val);
     }
 
     /**
@@ -342,10 +352,7 @@ public final class Util {
      */
     public static int HeatMapRBG(double val, double min, double max) {
         val = Scale0to1(val, min, max);
-        double c1 = val * 4;
-        double c2 = (val - 0.25) * 2;
-        double c3 = (val - 0.75) * 4;
-        return RGB(c1, c3, c2);
+        return HeatMapBGR(val);
     }
 
     /**
@@ -354,10 +361,7 @@ public final class Util {
      */
     public static int HeatMapGRB(double val, double min, double max) {
         val = Scale0to1(val, min, max);
-        double c1 = val * 4;
-        double c2 = (val - 0.25) * 2;
-        double c3 = (val - 0.75) * 4;
-        return RGB(c2, c1, c3);
+        return HeatMapGRB(val);
     }
 
     /**
@@ -366,10 +370,7 @@ public final class Util {
      */
     public static int HeatMapGBR(double val, double min, double max) {
         val = Scale0to1(val, min, max);
-        double c1 = val * 4;
-        double c2 = (val - 0.25) * 2;
-        double c3 = (val - 0.75) * 4;
-        return RGB(c3, c1, c2);
+        return HeatMapGBR(val);
     }
 
     /**
@@ -378,10 +379,7 @@ public final class Util {
      */
     public static int HeatMapBRG(double val, double min, double max) {
         val = Scale0to1(val, min, max);
-        double c1 = val * 4;
-        double c2 = (val - 0.25) * 2;
-        double c3 = (val - 0.75) * 4;
-        return RGB(c2, c3, c1);
+        return HeatMapBRG(val);
     }
 
     /**
@@ -390,19 +388,10 @@ public final class Util {
      */
     public static int HeatMapBGR(double val, double min, double max) {
         val = Scale0to1(val, min, max);
-        double c1 = val * 4;
-        double c2 = (val - 0.25) * 2;
-        double c3 = (val - 0.75) * 4;
-        return RGB(c2, c3, c1);
+        return HeatMapBGR(val);
     }
 
     public static int HeatMapJet(double val) {
-        return HeatMapJet(val,0,1);
-    }
-
-
-    public static int HeatMapJet(double val,double min,double max){
-        val=Scale0to1(val,min,max);
         if(val<=0){
             return RGB(0,0,0.5);
         }
@@ -413,6 +402,29 @@ public final class Util {
         double c2=1.5-Math.abs(0.5-val)*4;
         double c3=1.5-Math.abs(0.25-val)*4;
         return RGB(c1,c2,c3);
+    }
+
+
+    public static int HeatMapJet(double val,double min,double max){
+        val=Scale0to1(val,min,max);
+        return HeatMapJet(val);
+    }
+    public static int HeatMapParula(double val){
+        if(val<=0){
+            return RGB(0.2,0.2,0.5);
+        }
+        if(val>=1){
+            return RGB(1.0,1.0,0.0);
+        }
+        if(val<0.125){
+            return RGB(0.2-val*1.6,0.2+val*0.8,0.5+val*2);
+        }
+        return RGB((val-0.375)*2,0.2+val*0.8,0.9-val*1.143);
+    }
+
+    public static int HeatMapParula(double val, double min, double max){
+        val=Scale0to1(val,min,max);
+        return HeatMapParula(val);
     }
 
     /**
@@ -529,6 +541,18 @@ public final class Util {
             }break;
         }
         return RGB256((int)r,(int)g,(int)b);
+    }
+
+    public static int GreyScale(double val,double min, double max){
+        double colorVal=(val-min)/(max-min);
+        return RGB(colorVal,colorVal,colorVal);
+    }
+
+    /**
+     * generates a greyscale color, val is assumed to be in the range 0 to 1
+     */
+    public static int GreyScale(double val){
+        return RGB(val,val,val);
     }
 
     /**
@@ -1156,6 +1180,52 @@ public final class Util {
                     1, 0, 0, -1, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 1, 0, 0, -1};
         }
     }
+    public static int[] SemiMooreHood3D(boolean includeOrigin){
+        if(includeOrigin){
+            return new int[]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,
+                    1,0,0,
+                    -1,0,0,
+                    0,1,0,
+                    0,-1,0,
+                    0,0,1,
+                    0,0,-1,
+                    1,1,0,
+                    1,-1,0,
+                    1,0,1,
+                    1,0,-1,
+                    -1,1,0,
+                    -1,-1,0,
+                    -1,0,1,
+                    -1,0,-1,
+                    0,1,1,
+                    0,1,-1,
+                    0,-1,1,
+                    0,-1,-1,
+            };
+        }else{
+            return new int[]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                    1,0,0,
+                    -1,0,0,
+                    0,1,0,
+                    0,-1,0,
+                    0,0,1,
+                    0,0,-1,
+                    1,1,0,
+                    1,-1,0,
+                    1,0,1,
+                    1,0,-1,
+                    -1,1,0,
+                    -1,-1,0,
+                    -1,0,1,
+                    -1,0,-1,
+                    0,1,1,
+                    0,1,-1,
+                    0,-1,1,
+                    0,-1,-1,
+            };
+        }
+    }
 
     public static int[] MooreHood3D(boolean includeOrigin) {
         if (includeOrigin) {
@@ -1163,28 +1233,28 @@ public final class Util {
                     0, 0, 0,
                     0, 0, 1,
                     0, 0, -1,
+                    0, 1, 0,
+                    0, -1, 0,
                     1, 0, 0,
+                    -1, 0, 0,
                     1, 0, 1,
                     1, 0, -1,
                     1, 1, 0,
-                    1, 1, 1,
-                    1, 1, -1,
-                    0, 1, 0,
                     0, 1, 1,
                     0, 1, -1,
-                    -1, 0, 0,
                     -1, 0, 1,
                     -1, 0, -1,
                     -1, 1, 0,
-                    -1, 1, 1,
-                    -1, 1, -1,
                     -1, -1, 0,
-                    -1, -1, 1,
-                    -1, -1, -1,
-                    0, -1, 0,
                     0, -1, 1,
                     0, -1, -1,
                     1, -1, 0,
+                    1, 1, 1,
+                    1, 1, -1,
+                    -1, 1, 1,
+                    -1, 1, -1,
+                    -1, -1, 1,
+                    -1, -1, -1,
                     1, -1, 1,
                     1, -1, -1,
             };
@@ -1192,30 +1262,107 @@ public final class Util {
             return new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 1,
                     0, 0, -1,
+                    0, 1, 0,
+                    0, -1, 0,
                     1, 0, 0,
+                    -1, 0, 0,
                     1, 0, 1,
                     1, 0, -1,
                     1, 1, 0,
-                    1, 1, 1,
-                    1, 1, -1,
-                    0, 1, 0,
                     0, 1, 1,
                     0, 1, -1,
-                    -1, 0, 0,
                     -1, 0, 1,
                     -1, 0, -1,
                     -1, 1, 0,
-                    -1, 1, 1,
-                    -1, 1, -1,
                     -1, -1, 0,
-                    -1, -1, 1,
-                    -1, -1, -1,
-                    0, -1, 0,
                     0, -1, 1,
                     0, -1, -1,
                     1, -1, 0,
+                    1, 1, 1,
+                    1, 1, -1,
+                    -1, 1, 1,
+                    -1, 1, -1,
+                    -1, -1, 1,
+                    -1, -1, -1,
                     1, -1, 1,
                     1, -1, -1,
+            };
+        }
+    }
+
+    public static int[]CubicHoneyHood3DevenZ(boolean includeOrigin){
+        if(includeOrigin){
+            return new int[]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,
+                    0,0,2,
+                    0,0,-2,
+                    1,0,0,
+                    -1,0,0,
+                    0,1,0,
+                    0,-1,0,
+                    0,0,1,
+                    -1,0,1,
+                    -1,-1,1,
+                    0,-1,1,
+                    0,0,-1,
+                    -1,0,-1,
+                    -1,-1,-1,
+                    0,-1,-1,
+            };
+        }else{
+            return new int[]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                    0,0,2,
+                    0,0,-2,
+                    1,0,0,
+                    -1,0,0,
+                    0,1,0,
+                    0,-1,0,
+                    0,0,1,
+                    -1,0,1,
+                    -1,-1,1,
+                    0,-1,1,
+                    0,0,-1,
+                    -1,0,-1,
+                    -1,-1,-1,
+                    0,-1,-1,
+            };
+        }
+    }
+    public static int[]CubicHoneyHood3DoddZ(boolean includeOrigin){
+        if(includeOrigin){
+            return new int[]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                    0,0,0,
+                    0,0,2,
+                    0,0,-2,
+                    1,0,0,
+                    -1,0,0,
+                    0,1,0,
+                    0,-1,0,
+                    0,0,1,
+                    1,0,1,
+                    1,1,1,
+                    0,1,1,
+                    0,0,-1,
+                    1,0,-1,
+                    1,1,-1,
+                    0,1,-1,
+            };
+        }else{
+            return new int[]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                    0,0,2,
+                    0,0,-2,
+                    1,0,0,
+                    -1,0,0,
+                    0,1,0,
+                    0,-1,0,
+                    0,0,1,
+                    1,0,1,
+                    1,1,1,
+                    0,1,1,
+                    0,0,-1,
+                    1,0,-1,
+                    1,1,-1,
+                    0,1,-1,
             };
         }
     }
@@ -1408,7 +1555,7 @@ public final class Util {
         }
         for (int x = min; x <= max; x++) {
             for (int y = min; y <= max; y++) {
-                if (Util.DistSquared(0, 0, x, y) <= distSq) {
+                if (x*x+y*y <= distSq) {
                     if (x == 0 && y == 0) {
                         continue;
                     }
@@ -1420,6 +1567,41 @@ public final class Util {
         }
         int[] ret = new int[ct * 3];
         System.arraycopy(retLong, 0, ret, ct, ct * 2);
+        return ret;
+    }
+
+    /**
+     * generates a spherical neighborhood with the set of all coordinates in the sphere with center 0,0,0 and the given radius
+     */
+    static public int[]SphereHood(boolean includeOrigin, double radius) {
+        double distSq = radius * radius;
+        int min = (int) Math.floor(-radius);
+        int max = (int) Math.ceil(radius);
+        int[] retLong = new int[((max + 1 - min) * (max + 1 - min) * (max + 1 - min)) * 3];
+        int ct = 0;
+        if (includeOrigin) {
+            ct++;
+            retLong[0] = 0;
+            retLong[1] = 0;
+            retLong[2] = 0;
+        }
+        for (int x = min; x <= max; x++) {
+            for (int y = min; y <= max; y++) {
+                for (int z = min; z <= max; z++) {
+                    if (x * x + y * y + z * z < distSq) {
+                        if (x == 0 && y == 0 && z == 0) {
+                            continue;
+                        }
+                        retLong[ct * 3] = x;
+                        retLong[ct * 3 + 1] = y;
+                        retLong[ct * 3 + 2] = z;
+                        ct++;
+                    }
+                }
+            }
+        }
+        int[] ret = new int[ct * 4];
+        System.arraycopy(retLong, 0, ret, ct, ct * 3);
         return ret;
     }
 
@@ -1580,7 +1762,7 @@ public final class Util {
     }
 
     /**
-     * Samples a Poisson distribution
+     * Computes the probability of a specific average from a poisson distribution
      *
      * @param sampleSize How many times the event happens
      * @param avg        The average number of times the event happens
@@ -1619,7 +1801,7 @@ public final class Util {
      * transforms val with a sigmoid curve with a minCap of 0, a maxCap of 1, and an inflectionX value of 0
      *
      * @param val     the input value
-     * @param stretch linearly scales the sigmoid curve in the x dimension, the default is 1
+     * @param stretch linearly scales the sigmoid curve in the x dimension, the default is 1 (gets close to y=1 at around x=4)
      */
     public static double Sigmoid(double val, double stretch) {
         return 1 / (1.0 + Math.exp(-val / stretch));
@@ -1985,19 +2167,24 @@ public final class Util {
     public static double Rescale(double val, double oldMin, double oldMax, double newMin, double newMax) {
         return ScaleMinToMax(Scale0to1(val, oldMin, oldMax), newMin, newMax);
     }
+    public static double RescaleBounded(double val, double oldMin, double oldMax, double newMin, double newMax) {
+        return Bound(ScaleMinToMax(Scale0to1(val, oldMin, oldMax), newMin, newMax),newMin,newMax);
+    }
 
     /**
      * returns value with wraparound between 0 and max
      */
     public static int Wrap(int val, int max) {
-        return val < 0 ? max + val % max : val % max;
+        int mod=val%max;
+        return mod<0?max+mod:mod;
     }
 
     /**
      * returns value with wraparound between 0 and max
      */
     public static double Wrap(double val, double max) {
-        return val < 0 ? max + val % max : val % max;
+        double mod=val%max;
+        return mod<0?max+mod:mod;
     }
 
     /**
@@ -2327,57 +2514,57 @@ public final class Util {
     }
     static public byte[] Py4jDoublesOut(double[][]doubles){
         int maxLen=0;
-        for (int i = 0; i < doubles.length; i++) {
+        for(int i=0;i<doubles.length;i++){
             maxLen=Math.max(doubles[i].length,maxLen);
         }
-        ByteBuffer out= ByteBuffer.allocate(Double.BYTES*doubles.length*maxLen);
+        ByteBuffer out=ByteBuffer.allocate(Double.BYTES*doubles.length*maxLen);
         out.order(ByteOrder.LITTLE_ENDIAN);
-        for (int j = 0; j < doubles.length; j++) {
+        for(int j=0;j<doubles.length;j++){
             double[] row=doubles[j];
-        for (int i = 0; i < maxLen; i++) {
-            if(row.length>i) {
-                out.putDouble(row[i]);
-            }else{
-                out.putDouble(0);
-            }
-        }
-        }
-        return out.array();
-    }
-    static public byte[] Py4jDoublesOut(ArrayList<double[]> doubles){
-        int maxLen=0;
-        for (int i = 0; i < doubles.size(); i++) {
-            maxLen=Math.max(doubles.get(i).length,maxLen);
-        }
-        ByteBuffer out= ByteBuffer.allocate(Double.BYTES* doubles.size() *maxLen);
-        out.order(ByteOrder.LITTLE_ENDIAN);
-        for (int j = 0; j < doubles.size(); j++) {
-            double[] row= doubles.get(j);
-            for (int i = 0; i < maxLen; i++) {
-                if(row.length>i) {
+            for(int i=0;i<maxLen;i++){
+                if(row.length>i){
                     out.putDouble(row[i]);
                 }else{
-                    out.putDouble(0);
+                    out.putDouble(0);//pad missing entries
                 }
             }
         }
         return out.array();
     }
+//    static public byte[] Py4jDoublesOut(ArrayList<double[]> doubles){
+//        int maxLen=0;
+//        for (int i = 0; i < doubles.size(); i++) {
+//            maxLen=Math.max(doubles.get(i).length,maxLen);
+//        }
+//        ByteBuffer out= ByteBuffer.allocate(Double.BYTES* doubles.size() *maxLen);
+//        out.order(ByteOrder.LITTLE_ENDIAN);
+//        for (int j = 0; j < doubles.size(); j++) {
+//            double[] row= doubles.get(j);
+//            for (int i = 0; i < maxLen; i++) {
+//                if(row.length>i) {
+//                    out.putDouble(row[i]);
+//                }else{
+//                    out.putDouble(0);
+//                }
+//            }
+//        }
+//        return out.array();
+//    }
 
-    static public ArrayList<double[]> Py4jDoublesInAsArrayList(byte[] in,int nRows) {
-        int length = in.length / Double.BYTES;
-        ArrayList<double[]> out = new ArrayList<>(nRows);
-        ByteBuffer buf = ByteBuffer.wrap(in);
-        buf.order(ByteOrder.LITTLE_ENDIAN);
-        for (int i = 0; i < nRows; i++) {
-            out.add(new double[length/nRows]);
-            double[] row = out.get(out.size()-1);
-            for (int j = 0; j < row.length; j++) {
-                row[j] = buf.getDouble();
-            }
-        }
-        return out;
-    }
+//    static public ArrayList<double[]> Py4jDoublesInAsArrayList(byte[] in,int nRows) {
+//        int length = in.length / Double.BYTES;
+//        ArrayList<double[]> out = new ArrayList<>(nRows);
+//        ByteBuffer buf = ByteBuffer.wrap(in);
+//        buf.order(ByteOrder.LITTLE_ENDIAN);
+//        for (int i = 0; i < nRows; i++) {
+//            out.add(new double[length/nRows]);
+//            double[] row = out.get(out.size()-1);
+//            for (int j = 0; j < row.length; j++) {
+//                row[j] = buf.getDouble();
+//            }
+//        }
+//        return out;
+//    }
     static public double[][] Py4jDoublesIn(byte[] in,int nRows) {
         int length = in.length / Double.BYTES;
         double[][] out = new double[nRows][length / nRows];
@@ -2402,6 +2589,21 @@ public final class Util {
         return out;
     }
 
+    static public void DoublesToCSV(String path,double[][]data,String[]headers){
+        FileIO out=new FileIO(path,"w");
+        out.Write(ArrToString(headers,",")+"\n");
+        for(double[] d: data){
+            out.Write(ArrToString(d,",")+"\n");
+        }
+        out.Close();
+    }
+    static public void DoublesToCSV(String path,double[][]data){
+        FileIO out=new FileIO(path,"w");
+        for(double[] d: data){
+            out.Write(ArrToString(d,",")+"\n");
+        }
+        out.Close();
+    }
 
     static int InterpComp(double val, int minComp, int maxComp) {
         return (int) ((maxComp - minComp) * val) + minComp;
@@ -2469,6 +2671,81 @@ public final class Util {
             e.printStackTrace();
         }
         return null;
+    }
+
+    static double[][]ReadCSVDoubles(String filename){
+        FileIO io=new FileIO(filename,"r");
+        ArrayList<double[]> data=io.ReadDoubles(",");
+        double[][]out=new double[data.size()][];
+        for(int i=0;i<out.length;i++){
+            out[i]=data.get(i);
+        }
+        return out;
+    }
+
+    static int[][]ReadCSVInts(String filename){
+        FileIO io=new FileIO(filename,"r");
+        ArrayList<int[]> data=io.ReadInts(",");
+        int[][]out=new int[data.size()][];
+        for(int i=0;i<out.length;i++){
+            out[i]=data.get(i);
+        }
+        return out;
+    }
+
+    /**
+     * draws a colorbar on a UIGrid
+     * @param barHere colorbar will be drawn on this UIGrid. Leave 34 pixels of clearance on the right of the bar to ensure that all text will fit.
+     * @param xBottomLeft x position of bottom left corner of bar
+     * @param yBottomLeft y position of bottom left corner of bar
+     * @param barWidth width of bar in pixels
+     * @param barHeight height of bar in pixels (bar will actually be barHeight-4 pixels tall, to make room for tick labels)
+     * @param min min value to display on bar
+     * @param max max value to display on bar
+     * @param ticks number of tick labels to display on bar
+     * @param Color color function that generates bar colors
+     */
+    public static void DrawColorBar(UIGrid barHere,int xBottomLeft,int yBottomLeft,int barWidth,int barHeight,double min,double max,int ticks,DoubleToColor Color){
+        double colorstep=(max-min)/(barHeight-4);
+        for(int y=0;y<barHeight-4;y++){
+            int color=Color.GenColor(y*colorstep+min);
+            for(int x=0;x<barWidth;x++){
+                barHere.SetPix(x+xBottomLeft,y+2+yBottomLeft,color);
+            }
+        }
+        double tickStep=(max-min)/(ticks-1);
+        double tickPix=(barHeight-5)*1.0/(ticks-1);
+        for(int i=0;i<ticks;i++){
+            barHere.SetPix(barWidth+xBottomLeft,(int)(i*tickPix)+2+yBottomLeft,RED);
+            barHere.SetPix(barWidth+1+xBottomLeft,(int)(i*tickPix)+2+yBottomLeft,RED);
+            barHere.SetString(fmt.format(min+tickStep*i),barWidth+2+xBottomLeft,(int)(i*tickPix)+5+yBottomLeft,WHITE,BLACK);
+        }
+    }
+    public static void ChangeColorBarMinMax(UIGrid barHere,int xBottomLeft,int yBottomLeft,int barWidth,int barHeight,double min,double max,int ticks){
+        double tickStep=(max-min)/(ticks-1);
+        double tickPix=(barHeight-5)*1.0/(ticks-1);
+        for(int i=0;i<ticks;i++){
+            barHere.SetPix(barWidth+xBottomLeft,(int)(i*tickPix)+2+yBottomLeft,RED);
+            barHere.SetPix(barWidth+1+xBottomLeft,(int)(i*tickPix)+2+yBottomLeft,RED);
+            barHere.SetString(String.format("%-8s",fmt.format(min+tickStep*i)),barWidth+2+xBottomLeft,(int)(i*tickPix)+5+yBottomLeft,WHITE,BLACK);
+        }
+
+    }
+
+    public static Grid2Dint PNGtoGrid(String filename) throws IOException {
+        // set up Grid2dint to store RGB values from PNG:
+        BufferedImage image = ImageIO.read(new FileInputStream(filename));
+        Grid2Dint RGBgrid = new Grid2Dint(image.getWidth(),image.getHeight());
+
+        // loop through all pixels:
+        for (int xPixel = 0; xPixel < image.getWidth(); xPixel++) {
+            for (int yPixel = 0; yPixel < image.getHeight(); yPixel++) {
+                // subtract from yDim so picture is right-side-up:
+                RGBgrid.Set(xPixel,RGBgrid.yDim-yPixel-1,image.getRGB(xPixel, yPixel));
+            }
+        }
+
+        return RGBgrid;
     }
 
 
