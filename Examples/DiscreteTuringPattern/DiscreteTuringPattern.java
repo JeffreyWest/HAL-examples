@@ -14,16 +14,16 @@ public class DiscreteTuringPattern extends AgentGrid2D<TuringCell> {
     public GridWindow vis;
 
 
-    public static final int Sar = 3; // activation neighborhood radius
-    public static final int Sir = 6; // inactivation neighborhood radius
+    public static final int Sar = 10; // 3activation neighborhood radius
+    public static final int Sir = 15; // 6inactivation neighborhood radius
 
     // inhibition & activation neighborhoods:
     public int[] activation_neighborhood = CircleHood(false,Sar);
     public int[] inhibition_neighborhood = CircleHood(false,Sir);
 
     public static final double w1 = 1.0;
-    public static final double w2 = -0.3;
-    double initial_seeding_fraction = 0.1;
+    public static final double w2 = -0.44; // - 0.3
+    double initial_seeding_fraction = 0.01;
 
     public static void main(String[]args){
 
@@ -51,7 +51,7 @@ public class DiscreteTuringPattern extends AgentGrid2D<TuringCell> {
 
     // constructor for the grid
     public DiscreteTuringPattern() {
-        super(DOMAIN_SIZE, DOMAIN_SIZE, TuringCell.class,false,false);
+        super(DOMAIN_SIZE, DOMAIN_SIZE, TuringCell.class,true,true);
 
         Rand rn = new Rand();
 
